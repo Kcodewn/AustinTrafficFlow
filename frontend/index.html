@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>Austin Traffic: Live + Prediction</title>
+  <style>
+    /* Full‑screen map */
+    #map { height: 100vh; width: 100vw; }
+    /* Controls panel */
+    #controls {
+      position: absolute;
+      z-index: 9999;
+      top: 10px; left: 50%;
+      transform: translateX(-50%);
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+      font-family: sans-serif;
+    }
+    #controls input, #controls button {
+      margin-left: 5px;
+    }
+  </style>
+</head>
+<body>
+  <div id="controls">
+    <label for="timeInput">Predict for: </label>
+    <input type="datetime-local" id="timeInput"
+           value="2025-04-22T08:00" />
+    <button id="predictBtn">Load Prediction</button>
+  </div>
+  <div id="map"></div>
+
+  <!-- Load the Maps JS API -->
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDXu4fHjGC7tH6HChFoOjG1cTFl2rXtpJg">
+  </script>
+  <script>
+    let map;
+    let trafficLayer;
+    let predictionCircles = [];
+
+    function initMap() {
+      map = new google.maps.Map(document.getElementById('map'), {
+        center: { lat: 30.2672, lng: -97.7431 },
+        zoom: 12
+      });
+
+      // Live traffic layer
+      trafficLayer = new google.maps.TrafficLayer();
+      trafficLayer.setMap(map);
+    }
+
+    function clearPredictions() {
+      predictionCircles.forEach(c => c.setMap(null));
+      predictionCircles = [];
+    }
+
+    function getColor(speed) {
+      if (speed < 15) return 'red';
+      if (speed < 30) return 'yellow';
+      return 'gray';
+    }
+
+    async function loadPrediction() {
+      clearPredictions();
+
+    const dtLocal = document.getElementById('timeInput').value;  // e.g. "2025-04-22T08:00"
+    if (!dtLocal) return;
+    // Create a JS Date from the *local* time string, then get its UTC ISO:
+    const iso = new Date(dtLocal).toISOString();                 // -> "2025-04-22T13:00:00.000Z"
+    console.log('Requesting prediction for', iso);
+
+      try {
+        const resp = await fetch(`http://127.0.0.1:5001/traffic?time=${iso}`);
+        const data = await resp.json();
+        console.log('Received', data.length, 'points');
+
+        data.forEach(pt => {
+          if (pt.latitude == null || pt.longitude == null) return;
+          const circle = new google.maps.Circle({
+            strokeColor: getColor(pt.speed),
+            fillColor:   getColor(pt.speed),
+            fillOpacity: 0.5,
+            strokeWeight: 1,
+            radius: 200,              // adjust for visibility
+            map,
+            center: { lat: pt.latitude, lng: pt.longitude }
+          });
+          predictionCircles.push(circle);
+        });
+      } catch (err) {
+        console.error('Prediction fetch failed:', err);
+      }
+    }
+
+    window.onload = () => {
+      initMap();
+      document.getElementById('predictBtn').onclick = loadPrediction;
+      // Optionally load a default prediction immediately:
+      loadPrediction();
+    };
+  </script>
+</body>
+</html>
