@@ -25,7 +25,7 @@ Establish baseline performance (MAE, RMSE) for future model improvements.
 
 1. Clone repository
 
-git clone https://github.com/yourusername/austin-traffic-simulator.git
+git clone https://github.com/Kcodewn/austin-traffic-simulator.git
 cd austin-traffic-simulator
 
 2. Obtain and configure Google Maps API Key:
